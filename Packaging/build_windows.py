@@ -34,7 +34,12 @@ def notices(bundle):
         name = dist.metadata['Name']
         dest = target / name
         dest.mkdir(exist_ok=True)
-        (dest / 'METADATA.txt').write_text(str(dist.metadata), encoding='utf-8')
+        # Preserve wheel metadata verbatim. Re-serializing its email headers can
+        # reject valid legacy packages containing multiline descriptions.
+        raw_metadata = dist.read_text('METADATA') or dist.read_text('PKG-INFO')
+        if raw_metadata is None:
+            raise RuntimeError(f'Missing distribution metadata for {name}')
+        (dest / 'METADATA.txt').write_text(raw_metadata, encoding='utf-8')
         for item in dist.files or []:
             relative = Path(str(item))
             if relative.is_absolute() or '..' in relative.parts:
